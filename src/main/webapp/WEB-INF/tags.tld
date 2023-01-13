@@ -3,4 +3,22 @@
     <tlib-version>1.0</tlib-version>
     <jsp-version>2.3</jsp-version>
     <short-name>tags</short-name>
+    <tag>
+        <name>URLEncodeTag</name>
+        <tag-class>net.ishop.servlets.tag_descriptors.URLEncodeTag</tag-class>
+        <body-content>empty</body-content>
+        <attribute>
+            <name>var</name>
+            <required>true</required>
+            <type>java.lang.String</type>
+            <rtexprvalue>false</rtexprvalue>
+        </attribute>
+        <attribute>
+            <name>url</name>
+            <required>true</required>
+            <type>java.lang.String</type>
+            <rtexprvalue>true</rtexprvalue>
+        </attribute>
+    </tag>
+
 </taglib>
