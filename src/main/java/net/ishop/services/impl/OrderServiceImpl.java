@@ -16,16 +16,28 @@ import net.ishop.models.forms.ProductForm;
 import net.ishop.models.social.CurrentAccount;
 import net.ishop.models.social.SocialAccount;
 import net.ishop.services.OrderService;
+
+import org.apache.commons.mail.DefaultAuthenticator;
+import org.apache.commons.mail.EmailException;
+import org.apache.commons.mail.SimpleEmail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.net.URL;
+import java.util.UUID;
 
 class OrderServiceImpl implements OrderService {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrderServiceImpl.class);
@@ -45,9 +57,25 @@ class OrderServiceImpl implements OrderService {
 
 
     private final DataSource dataSource;
+    private final String rootDir;
 
-    public OrderServiceImpl(DataSource dataSource) {
+    private final String smtpHost;
+    private final String smtpPort;
+    private final String smtpUserName;
+    private final String smtpPassword;
+    private final String host;
+    private final String fromAddress;
+
+    public OrderServiceImpl(DataSource dataSource, ServiceManager serviceManager) {
         this.dataSource = dataSource;
+        this.rootDir = serviceManager.getApplicationProperty("app.avatar.root.dir");
+
+        this.smtpHost = serviceManager.getApplicationProperty("email.smtp.server");
+        this.smtpPort = serviceManager.getApplicationProperty("email.smtp.port");
+        this.smtpUserName = serviceManager.getApplicationProperty("email.smtp.username");
+        this.smtpPassword = serviceManager.getApplicationProperty("email.smtp.password");
+        this.host = serviceManager.getApplicationProperty("app.host");
+        this.fromAddress = serviceManager.getApplicationProperty("email.smtp.fromAddress");
     }
 
     @Override
@@ -58,16 +86,26 @@ class OrderServiceImpl implements OrderService {
                     connection, sqlSelect, accountResultSetHandler, socialAccount.getEmail()
             );
             if (account == null) {
-                account = new Account(socialAccount.getName(), socialAccount.getEmail());
-                String sqlInsert = "INSERT INTO account VALUES (nextval('account_seq'),?,?)";
+                String uniqFileName = UUID.randomUUID().toString() + ".jpg";
+                Path pathFileToSave = Paths.get(rootDir + "/" + uniqFileName);
+                downloadAvatar(socialAccount.getAvatarUrl(), pathFileToSave);
+                String sqlInsert = "INSERT INTO account VALUES (nextval('account_seq'),?,?,?)";
                 account = JDBCUtils.insertDataToDB(
-                        connection, sqlInsert, accountResultSetHandler, account.getName(), account.getEmail()
+                        connection, sqlInsert, accountResultSetHandler, socialAccount.getName(), socialAccount.getEmail(), "/media/avatars/" + uniqFileName
                 );
 //                connection.commit();
             }
             return account;
         } catch (SQLException sqlException) {
             throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
+        } catch (IOException ioException) {
+            throw new InternalServerErrorException("Can't process avatar link ", ioException);
+        }
+    }
+
+    protected void downloadAvatar(String avatarUrl, Path pathFileToSave) throws IOException {
+        try (InputStream inputStream = new URL(avatarUrl).openStream()) {
+            Files.copy(inputStream, pathFileToSave);
         }
     }
 
@@ -108,9 +146,28 @@ class OrderServiceImpl implements OrderService {
 
             JDBCUtils.insertBatchDataToDB(connection, sqlInsertOrderItem, orderItemParameterList);
 //            connection.commit();
+            sendEmail(currentAccount.getEmail(), order);
             return order.getId();
         } catch (SQLException sqlException) {
             throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
+        }
+    }
+
+    private void sendEmail(String emailAddress, Order order) {
+        try {
+            SimpleEmail email = new SimpleEmail();
+            email.setCharset("UTF-8");
+            email.setHostName(smtpHost);
+            email.setSSLOnConnect(true);
+            email.setSslSmtpPort(smtpPort);
+            email.setFrom(fromAddress);
+            email.setAuthentication(smtpUserName, smtpPassword);
+            email.setSubject("New order");
+            email.setMsg(host+"/order?id="+ order.getId());
+            email.addTo(emailAddress);
+            email.send();
+        } catch (EmailException e) {
+            LOGGER.error("Error during send email: " + e.getMessage(), e);
         }
     }
 

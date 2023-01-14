@@ -14,6 +14,7 @@ public class ResultSetHandlerFactory {
         account.setId(resultSet.getInt("id"));
         account.setName(resultSet.getString("name"));
         account.setEmail(resultSet.getString("email"));
+        account.setAvatarUrl(resultSet.getString("avatar_url"));
         return account;
     };
 

@@ -35,7 +35,9 @@ public class FacebookSocialServiceImpl implements SocialService {
         DefaultFacebookClient facebookClient = new DefaultFacebookClient(Version.VERSION_4_0);
         FacebookClient.AccessToken userAccessToken = facebookClient.obtainUserAccessToken(idClient, secret, redirectUrl, authToken);
         facebookClient = new DefaultFacebookClient(userAccessToken.getAccessToken(), Version.VERSION_4_0);
-        User user = facebookClient.fetchObject("me", User.class, Parameter.with("fields", "name,email,first_name,last_name"));
-        return new SocialAccount(user.getFirstName(), user.getEmail());
+        User user = facebookClient.fetchObject("me", User.class,
+                Parameter.with("fields", "name,email,first_name,last_name"));
+        String avatarUrl = String.format("https://graph.facebook.com/v15.0/%s/picture?access_token=%s", user.getId(), userAccessToken.getAccessToken());
+        return new SocialAccount(user.getFirstName(), user.getEmail(), avatarUrl);
     }
 }

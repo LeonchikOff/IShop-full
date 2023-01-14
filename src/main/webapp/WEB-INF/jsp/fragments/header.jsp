@@ -36,6 +36,7 @@
             <c:choose>
                 <c:when test="${sessionScope.CURRENT_ACCOUNT != null}">
                     <ul class="nav navbar-nav navbar-right">
+                        <li><img src="${sessionScope.CURRENT_ACCOUNT.avatarUrl}" class="avatar" alt="avatar"></li>
                         <li><a>Welcome ${sessionScope.CURRENT_ACCOUNT.description  }</a></li>
                         <li><a href="<c:url value="/my_orders"/>">My orders</a></li>
                         <li><a href="javascript:void(0); " class="post-request" data-url="<c:url value="/sign_out"/>">Sign out</a></li>

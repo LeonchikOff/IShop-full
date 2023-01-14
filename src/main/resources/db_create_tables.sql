@@ -42,6 +42,9 @@ create table public.account
     email varchar(100) unique not null
 );
 
+alter table account
+    add avatar_url varchar(255);
+
 create table public.order
 (
     id              bigint primary key not null,
