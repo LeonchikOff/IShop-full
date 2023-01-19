@@ -19,9 +19,9 @@ public class MyOrdersControllerServlet extends AbstractControllerServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         CurrentAccount currentAccount = SessionAccountUtils.getCurrentAccount(req);
         List<Order> listMyOrders = this.getOrderService()
-                .getListMyOrders(currentAccount, 1, Constants.COUNT_ORDERS_PER_PAGE);
+                .getListOrdersForCurrentAccount(currentAccount, 1, Constants.COUNT_ORDERS_PER_PAGE);
         req.setAttribute("listMyOrders", listMyOrders);
-        int countMyOrders = this.getOrderService().getCountMyOrders(currentAccount);
+        int countMyOrders = this.getOrderService().getCountOfOrdersForCurrentAccount(currentAccount);
         req.setAttribute("countPage", this.getCountPage(countMyOrders, Constants.COUNT_ORDERS_PER_PAGE));
 
 //        RoutingUtils.forwardToPageTemplate("my_orders.jsp", req, resp);

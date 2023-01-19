@@ -1,5 +1,6 @@
 package net.ishop.services;
 
+import net.framework.annotations.jdbc.Transactional;
 import net.ishop.entities.Category;
 import net.ishop.entities.Producer;
 import net.ishop.entities.Product;
@@ -8,6 +9,7 @@ import net.ishop.models.forms.SearchForm;
 import java.util.List;
 
 public interface ProductService {
+
     List<Category> getAllCategoriesList();
     List<Producer> getAllProducersList();
 

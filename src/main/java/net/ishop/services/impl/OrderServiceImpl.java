@@ -1,5 +1,6 @@
 package net.ishop.services.impl;
 
+import net.framework.annotations.jdbc.Transactional;
 import net.ishop.entities.Account;
 import net.ishop.entities.Order;
 import net.ishop.entities.OrderItem;
@@ -7,56 +8,33 @@ import net.ishop.entities.Product;
 import net.ishop.exceptions.AccessDeniedException;
 import net.ishop.exceptions.InternalServerErrorException;
 import net.ishop.exceptions.ResourceNotFoundException;
-import net.ishop.jdbc.JDBCUtils;
-import net.ishop.jdbc.ResultSetHandler;
-import net.ishop.jdbc.ResultSetHandlerFactory;
+import net.ishop.jdbc.repository.AccountRepository;
+import net.ishop.jdbc.repository.OrderItemRepository;
+import net.ishop.jdbc.repository.OrderRepository;
+import net.ishop.jdbc.repository.ProductRepository;
 import net.ishop.models.ShoppingCart;
-import net.ishop.models.ShoppingCartItem;
 import net.ishop.models.forms.ProductForm;
 import net.ishop.models.social.CurrentAccount;
 import net.ishop.models.social.SocialAccount;
 import net.ishop.services.OrderService;
-
-import org.apache.commons.mail.DefaultAuthenticator;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.net.URL;
 import java.util.UUID;
 
-class OrderServiceImpl implements OrderService {
+public class OrderServiceImpl implements OrderService {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrderServiceImpl.class);
 
-    private static final ResultSetHandler<Product> productResultSetHandler =
-            ResultSetHandlerFactory.getSingleResultSetHandler(ResultSetHandlerFactory.PRODUCT_RESULT_SET_HANDLER);
-    public static final ResultSetHandler<Account> accountResultSetHandler =
-            ResultSetHandlerFactory.getSingleResultSetHandler(ResultSetHandlerFactory.ACCOUNT_RESULT_SET_HANDLER);
-    public static final ResultSetHandler<Order> orderResultSetHandler =
-            ResultSetHandlerFactory.getSingleResultSetHandler(ResultSetHandlerFactory.ORDER_RESULT_SET_HANDLER);
-    public static final ResultSetHandler<List<Order>> ordersResultSetHandler
-            = ResultSetHandlerFactory.getListResultSetHandler(ResultSetHandlerFactory.ORDER_RESULT_SET_HANDLER);
-    public static final ResultSetHandler<List<OrderItem>> orderItemsResultSetHandler =
-            ResultSetHandlerFactory.getListResultSetHandler(ResultSetHandlerFactory.ORDER_ITEM_RESULT_SET_HANDLER);
-    public static final ResultSetHandler<Integer> countOrdersResultSetHandler =
-            ResultSetHandlerFactory.getCountResultSetHandler();
-
-
-    private final DataSource dataSource;
     private final String rootDir;
 
     private final String smtpHost;
@@ -66,38 +44,40 @@ class OrderServiceImpl implements OrderService {
     private final String host;
     private final String fromAddress;
 
-    public OrderServiceImpl(DataSource dataSource, ServiceManager serviceManager) {
-        this.dataSource = dataSource;
-        this.rootDir = serviceManager.getApplicationProperty("app.avatar.root.dir");
+    private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final AccountRepository accountRepository;
 
+    public OrderServiceImpl(ServiceManager serviceManager) {
+        this.rootDir = serviceManager.getApplicationProperty("app.avatar.root.dir");
         this.smtpHost = serviceManager.getApplicationProperty("email.smtp.server");
         this.smtpPort = serviceManager.getApplicationProperty("email.smtp.port");
         this.smtpUserName = serviceManager.getApplicationProperty("email.smtp.username");
         this.smtpPassword = serviceManager.getApplicationProperty("email.smtp.password");
         this.host = serviceManager.getApplicationProperty("app.host");
         this.fromAddress = serviceManager.getApplicationProperty("email.smtp.fromAddress");
+
+        productRepository = serviceManager.getProductRepository();
+        orderRepository = serviceManager.getOrderRepository();
+        orderItemRepository = serviceManager.getOrderItemRepository();
+        accountRepository = serviceManager.getAccountRepository();
     }
 
     @Override
+    @Transactional(readOnly = false)
     public CurrentAccount authenticateViaDB(SocialAccount socialAccount) {
-        try (Connection connection = this.dataSource.getConnection()) {
-            String sqlSelect = "SELECT * FROM account where email = ?";
-            Account account = JDBCUtils.getDataOnSelect(
-                    connection, sqlSelect, accountResultSetHandler, socialAccount.getEmail()
-            );
-            if (account == null) {
+        try {
+            Account accountByEmail = accountRepository.findByEmail(socialAccount.getEmail());
+            if (accountByEmail == null) {
                 String uniqFileName = UUID.randomUUID().toString() + ".jpg";
                 Path pathFileToSave = Paths.get(rootDir + "/" + uniqFileName);
                 downloadAvatar(socialAccount.getAvatarUrl(), pathFileToSave);
-                String sqlInsert = "INSERT INTO account VALUES (nextval('account_seq'),?,?,?)";
-                account = JDBCUtils.insertDataToDB(
-                        connection, sqlInsert, accountResultSetHandler, socialAccount.getName(), socialAccount.getEmail(), "/media/avatars/" + uniqFileName
-                );
-//                connection.commit();
+                String avatarUrl = "/media/avatars/" + uniqFileName;
+                accountByEmail = new Account(socialAccount.getName(), socialAccount.getEmail(), avatarUrl);
+                accountRepository.createAccount(accountByEmail);
             }
-            return account;
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
+            return accountByEmail;
         } catch (IOException ioException) {
             throw new InternalServerErrorException("Can't process avatar link ", ioException);
         }
@@ -110,131 +90,64 @@ class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void addProductToShoppingCart(ProductForm productForm, ShoppingCart shoppingCart) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql =
-                    "SELECT p.*, ctr.name AS category, pr.name AS producer FROM product p, category ctr, producer pr " +
-                            "WHERE p.id_category = ctr.id AND p.id_producer = pr.id  AND p.id=?";
-            Product product = JDBCUtils.getDataOnSelect(connection, sql, productResultSetHandler, productForm.getIdProduct());
-            if (product == null) {
-                throw new InternalServerErrorException("Product not found by id: " + productForm.getIdProduct());
-            }
-            shoppingCart.addProduct(product, productForm.getCount());
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute sql query: " + sqlException.getMessage(), sqlException);
-        }
+    @Transactional(readOnly = false)
+    public long makeOrderAndGetId(ShoppingCart shoppingCart, CurrentAccount currentAccount) {
+        validateShoppingCart(shoppingCart);
+        Order order = new Order(new Timestamp(System.currentTimeMillis()), currentAccount.getId());
+        orderRepository.createOrder(order);
+        shoppingCart.getShoppingCartItems().forEach(shoppingCartItem -> {
+            orderItemRepository.createOrderItem(
+                    new OrderItem(order.getId(), shoppingCartItem.getProduct(), shoppingCartItem.getQuantityOfUniqueProduct()));
+        });
+        sendEmail(currentAccount.getEmail(), order);
+        return order.getId();
     }
+
+    private void validateShoppingCart(ShoppingCart shoppingCart) {
+        if (shoppingCart == null || shoppingCart.getShoppingCartItems().isEmpty())
+            throw new InternalServerErrorException("Shopping cart is empty");
+    }
+
+    @Override
+    @Transactional
+    public void addProductToShoppingCart(ProductForm productForm, ShoppingCart shoppingCart) {
+        Product productById = productRepository.findProductById(productForm.getIdProduct());
+        if (productById == null)
+            throw new InternalServerErrorException("Product not found by id: " + productForm.getIdProduct());
+        shoppingCart.addProduct(productById, productForm.getCount());
+    }
+
 
     @Override
     public void removeProductFromShoppingCart(ProductForm productForm, ShoppingCart shoppingCart) {
         shoppingCart.removeProduct(productForm.getIdProduct(), productForm.getCount());
     }
 
-    @Override
-    public long makeOrderAndGetId(ShoppingCart shoppingCart, CurrentAccount currentAccount) {
-        if (shoppingCart == null || shoppingCart.getShoppingCartItems().isEmpty()) {
-            throw new InternalServerErrorException("Shopping cart is empty");
-        }
-        try (Connection connection = dataSource.getConnection()) {
-            String sqlInsertOrder = "INSERT INTO \"order\" VALUES (nextval('order_seq'),?,?)";
-
-            Order order = JDBCUtils.insertDataToDB(
-                    connection, sqlInsertOrder, orderResultSetHandler, new Timestamp(System.currentTimeMillis()), currentAccount.getId());
-
-            String sqlInsertOrderItem = "INSERT INTO order_item VALUES (nextval('order_item_seq'),?,?,?)";
-            List<Object[]> orderItemParameterList = toOrderItemParameterList(order.getId(), shoppingCart.getShoppingCartItems());
-
-            JDBCUtils.insertBatchDataToDB(connection, sqlInsertOrderItem, orderItemParameterList);
-//            connection.commit();
-            sendEmail(currentAccount.getEmail(), order);
-            return order.getId();
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
-        }
-    }
-
-    private void sendEmail(String emailAddress, Order order) {
-        try {
-            SimpleEmail email = new SimpleEmail();
-            email.setCharset("UTF-8");
-            email.setHostName(smtpHost);
-            email.setSSLOnConnect(true);
-            email.setSslSmtpPort(smtpPort);
-            email.setFrom(fromAddress);
-            email.setAuthentication(smtpUserName, smtpPassword);
-            email.setSubject("New order");
-            email.setMsg(host+"/order?id="+ order.getId());
-            email.addTo(emailAddress);
-            email.send();
-        } catch (EmailException e) {
-            LOGGER.error("Error during send email: " + e.getMessage(), e);
-        }
-    }
 
     @Override
+    @Transactional
     public Order findOrderById(long orderId, CurrentAccount currentAccount) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sqlSelectForOrder = "SELECT * FROM \"order\" WHERE id=?";
-            Order order = JDBCUtils.getDataOnSelect(connection, sqlSelectForOrder, orderResultSetHandler, orderId);
-            if (order == null) {
-                throw new ResourceNotFoundException("Order not found by id: " + orderId);
-            }
-            if (!order.getIdAccount().equals(currentAccount.getId())) {
-                throw new AccessDeniedException("Account with id: " + currentAccount.getId() + " is not owner for order with id: " + orderId);
-            }
-
-            String sqlSelectForOrderItems =
-                    "SELECT " +
-                            "oi.id as order_item_id, " +
-                            "oi.id_order as id_order, " +
-                            "p.*, " +
-                            "ctr.name as category, " +
-                            "pr.name  as producer, " +
-                            "oi.count " +
-                            "FROM order_item oi, product p, category ctr, producer pr " +
-                            "WHERE p.id = oi.id_product and p.id_category = ctr.id and p.id_producer = pr.id and oi.id_order = ?;";
-
-            List<OrderItem> orderItems = JDBCUtils.getDataOnSelect(connection, sqlSelectForOrderItems, orderItemsResultSetHandler, orderId);
-            order.setOrderItemsList(orderItems);
-            return order;
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
-        }
+        Order orderById = orderRepository.findOrderById(orderId);
+        if (orderById == null) throw new ResourceNotFoundException("Order not found by id: " + orderId);
+        if (!orderById.getIdAccount().equals(currentAccount.getId()))
+            throw new AccessDeniedException("Account with id: " + currentAccount.getId() + " is not owner for order with id: " + orderId);
+        orderById.setOrderItemsList(orderItemRepository.findOrderItemsByOrderId(orderId));
+        return orderById;
     }
 
     @Override
-    public List<Order> getListMyOrders(CurrentAccount currentAccount, int numberOfPage, int limit) {
+    @Transactional
+    public List<Order> getListOrdersForCurrentAccount(CurrentAccount currentAccount, int numberOfPage, int limit) {
         int offSet = (numberOfPage - 1) * limit;
-        try (Connection connection = dataSource.getConnection()) {
-            String sqlSelectOrder = "SELECT * FROM \"order\" WHERE id_account = ? ORDER BY id DESC LIMIT ? OFFSET ?;";
-            return JDBCUtils.getDataOnSelect(connection, sqlSelectOrder, ordersResultSetHandler, currentAccount.getId(), limit, offSet);
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
-        }
+        return orderRepository.findOrdersByAccountId(currentAccount.getId(), limit, offSet);
     }
 
     @Override
-    public int getCountMyOrders(CurrentAccount currentAccount) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sqlSelectCountOfOrders = "SELECT count(*) FROM \"order\" WHERE id_account = ?";
-            return JDBCUtils.getDataOnSelect(connection, sqlSelectCountOfOrders, countOrdersResultSetHandler, currentAccount.getId());
-        } catch (SQLException sqlException) {
-            throw new InternalServerErrorException("Can't execute SQL request: " + sqlException.getMessage(), sqlException);
-        }
+    @Transactional
+    public int getCountOfOrdersForCurrentAccount(CurrentAccount currentAccount) {
+        return orderRepository.getCountOrdersByAccountId(currentAccount.getId());
     }
 
-    private List<Object[]> toOrderItemParameterList(long idOrder, Collection<ShoppingCartItem> cartItems) {
-        ArrayList<Object[]> parametersList = new ArrayList<>();
-        cartItems.forEach(shoppingCartItem -> parametersList.add(
-                new Object[]
-                        {
-                                idOrder,
-                                shoppingCartItem.getProduct().getId(),
-                                shoppingCartItem.getQuantityOfUniqueProduct(),
-                        })
-        );
-        return parametersList;
-    }
 
     public String serializeShoppingCart(ShoppingCart shoppingCart) {
         StringBuilder stringBuilder = new StringBuilder();
@@ -249,6 +162,7 @@ class OrderServiceImpl implements OrderService {
         return stringBuilder.toString();
     }
 
+    @Transactional
     public ShoppingCart deserializeShoppingCart(String str) {
         ShoppingCart shoppingCart = new ShoppingCart();
         String[] shoppingCartItems = str.split("[|]");
@@ -263,5 +177,23 @@ class OrderServiceImpl implements OrderService {
             }
         }
         return shoppingCart.getShoppingCartItems().isEmpty() ? null : shoppingCart;
+    }
+
+    private void sendEmail(String emailAddress, Order order) {
+        try {
+            SimpleEmail email = new SimpleEmail();
+            email.setCharset("UTF-8");
+            email.setHostName(smtpHost);
+            email.setSSLOnConnect(true);
+            email.setSslSmtpPort(smtpPort);
+            email.setFrom(fromAddress);
+            email.setAuthentication(smtpUserName, smtpPassword);
+            email.setSubject("New order");
+            email.setMsg(host + "/order?id=" + order.getId());
+            email.addTo(emailAddress);
+            email.send();
+        } catch (EmailException e) {
+            LOGGER.error("Error during send email: " + e.getMessage(), e);
+        }
     }
 }

@@ -17,7 +17,7 @@ import java.util.List;
 public class DisplayMoreMyOrdersControllerServlet extends AbstractControllerServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        List<Order> listMyOrders = this.getOrderService().getListMyOrders(
+        List<Order> listMyOrders = this.getOrderService().getListOrdersForCurrentAccount(
                         SessionAccountUtils.getCurrentAccount(req), this.getCurrentPage(req), Constants.COUNT_ORDERS_PER_PAGE);
         req.setAttribute("listMyOrders", listMyOrders);
         RoutingUtils.forwardToFragment("my_orders_tbody.jsp", req, resp);

@@ -1,34 +1,45 @@
 package net.ishop.entities;
 
+import net.framework.annotations.jdbc.mapping.Column;
+import net.framework.annotations.jdbc.mapping.Table;
+import net.framework.annotations.jdbc.mapping.Transient;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
 
+@Table(nameOfTable = "\"order\"", generationNextIdExpresion = "nextval('order_seq')")
 public class Order extends AbstractEntity<Long> {
-    private Integer idAccount;
+    @Column(columnName = "date_of_created")
     private Timestamp dateOfCreated;
+    @Column(columnName = "id_account")
+    private Integer idAccount;
+    @Transient
     private List<OrderItem> orderItemsList;
 
-    public Integer getIdAccount() {
-        return idAccount;
+    public Order() {
     }
 
-    public void setIdAccount(Integer idAccount) {
+    public Order(Timestamp dateOfCreated, Integer idAccount) {
+        this.dateOfCreated = dateOfCreated;
         this.idAccount = idAccount;
     }
 
     public Timestamp getDateOfCreated() {
         return dateOfCreated;
     }
-
-    public void setDateOfCreated(Timestamp dateOfCreated) {
-        this.dateOfCreated = dateOfCreated;
+    public Integer getIdAccount() {
+        return idAccount;
     }
-
     public List<OrderItem> getOrderItemsList() {
         return orderItemsList;
     }
-
+    public void setDateOfCreated(Timestamp dateOfCreated) {
+        this.dateOfCreated = dateOfCreated;
+    }
+    public void setIdAccount(Integer idAccount) {
+        this.idAccount = idAccount;
+    }
     public void setOrderItemsList(List<OrderItem> orderItemsList) {
         this.orderItemsList = orderItemsList;
     }

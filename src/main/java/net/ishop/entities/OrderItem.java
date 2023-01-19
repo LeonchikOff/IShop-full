@@ -1,16 +1,25 @@
 package net.ishop.entities;
 
-public class OrderItem extends AbstractEntity<Long> {
-    private Long idOrder;
-    private Product product;
-    private int count;
+import net.framework.annotations.jdbc.mapping.JoinTable;
+import net.framework.annotations.jdbc.mapping.Column;
+import net.framework.annotations.jdbc.mapping.Table;
 
-    public OrderItem(Product product, int count) {
-        this.product = product;
-        this.count = count;
-    }
+@Table(nameOfTable = "order_item", generationNextIdExpresion = "nextval('order_item_seq')")
+public class OrderItem extends AbstractEntity<Long> {
+    @Column(columnName = "id_order")
+    private Long idOrder;
+    @JoinTable(columnName = "id_product", nameOfFieldBeJoined = "id")
+    private Product product;
+    @Column(columnName = "count")
+    private Integer count;
 
     public OrderItem() {
+    }
+
+    public OrderItem(Long idOrder, Product product, Integer count) {
+        this.idOrder = idOrder;
+        this.product = product;
+        this.count = count;
     }
 
     public Long getIdOrder() {
@@ -29,11 +38,11 @@ public class OrderItem extends AbstractEntity<Long> {
         this.product = product;
     }
 
-    public int getCount() {
+    public Integer getCount() {
         return count;
     }
 
-    public void setCount(int count) {
+    public void setCount(Integer count) {
         this.count = count;
     }
 

@@ -1,14 +1,29 @@
 package net.ishop.entities;
 
+import net.framework.annotations.jdbc.mapping.Column;
+import net.framework.annotations.jdbc.mapping.Table;
+
 import java.math.BigDecimal;
 
+@Table(nameOfTable = "product")
 public class Product extends AbstractEntity<Integer> {
+    @Column(columnName = "name")
     private String name;
-    private String description;
+    @Column(columnName = "price")
     private BigDecimal price;
+    @Column(columnName = "description")
+    private String description;
+    @Column(columnName = "image_link")
     private String imageLink;
+
+    @Column(columnName = "category_name")
     private String categoryName;
+    @Column(columnName = "producer_name")
     private String producerName;
+
+    public Product() {
+    }
+
 
     public String getName() {
         return name;
