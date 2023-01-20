@@ -73,21 +73,7 @@ public class DependencyInjectionManager {
 
     public void addingClassesAndCorrespondingInstancesToContainerFromPackage(String packagePath) {
         try {
-            ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-            Enumeration<URL> urlEnumerationResources = contextClassLoader.getResources(packagePath.replace(".", "/"));
-            List<Class<?>> classes = new ArrayList<>();
-            while (urlEnumerationResources.hasMoreElements()) {
-                URL urlResource = urlEnumerationResources.nextElement();
-                String urlResources = urlResource.getFile();
-                File fileDir = new File(urlResources);
-                for (File file : Objects.requireNonNull(fileDir.listFiles())) {
-                    String fileName = file.getName();
-                    if (fileName.endsWith(".class")) {
-                        Class<?> classByName = Class.forName(packagePath.concat(".").concat(fileName.replace(".class", "")));
-                        classes.add(classByName);
-                    }
-                }
-            }
+            List<Class<?>> classes = getAllClassesInPackage(packagePath);
             for (Class<?> aClass : classes) {
                 Object instance = null;
                 if (aClass.isInterface()) {
@@ -135,6 +121,25 @@ public class DependencyInjectionManager {
         } catch (ClassNotFoundException | IllegalArgumentException | IOException e) {
             throw new FrameworkSystemException("Can't load instances from package:" + packagePath, e);
         }
+    }
+
+    protected List<Class<?>> getAllClassesInPackage(String packagePath) throws IOException, ClassNotFoundException {
+        ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+        Enumeration<URL> urlEnumerationResources = contextClassLoader.getResources(packagePath.replace(".", "/"));
+        List<Class<?>> classes = new ArrayList<>();
+        while (urlEnumerationResources.hasMoreElements()) {
+            URL urlResource = urlEnumerationResources.nextElement();
+            String urlResources = urlResource.getFile();
+            File fileDir = new File(urlResources);
+            for (File file : Objects.requireNonNull(fileDir.listFiles())) {
+                String fileName = file.getName();
+                if (fileName.endsWith(".class")) {
+                    Class<?> classByName = Class.forName(packagePath.concat(".").concat(fileName.replace(".class", "")));
+                    classes.add(classByName);
+                }
+            }
+        }
+        return classes;
     }
 
     public void injectionOfDependenciesInInstances() {

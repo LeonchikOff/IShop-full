@@ -20,10 +20,7 @@ import net.ishop.models.ShoppingCart;
 import net.ishop.models.forms.ProductForm;
 import net.ishop.models.social.CurrentAccount;
 import net.ishop.models.social.SocialAccount;
-import net.ishop.services.interfaces.AvatarService;
-import net.ishop.services.interfaces.CookieService;
-import net.ishop.services.interfaces.NotificationService;
-import net.ishop.services.interfaces.OrderService;
+import net.ishop.services.interfaces.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +45,8 @@ public class OrderServiceImpl implements OrderService {
     private CookieService cookieService;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    NotificationContentBuilderService notificationContentBuilderService;
 
     public OrderServiceImpl() {
     }
@@ -78,7 +77,8 @@ public class OrderServiceImpl implements OrderService {
         TransactionalSynchronizationManager.addTransactionSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                notificationService.sendNotificationAboutCreatedNewOrder(currentAccount.getEmail(), order);
+                String notificationMessage = notificationContentBuilderService.buildNotificationMessageAboutCreatedNewOrder(order);
+                notificationService.sendNotification(currentAccount.getEmail(), notificationMessage);
             }
         });
         return order.getId();

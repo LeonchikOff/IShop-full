@@ -1,6 +1,7 @@
 package net.ishop.services;
 
 import net.framework.DependencyInjectionManager;
+import net.framework.DependencyInjectionManagerAdvanced;
 import net.ishop.services.interfaces.OrderService;
 import net.ishop.services.interfaces.ProductService;
 import net.ishop.services.interfaces.SocialService;
@@ -41,7 +42,7 @@ public class ServiceManager {
         dataSource = createDataSource();
         Map<Class<?>, Object> externalDependencies = new HashMap<>();
         externalDependencies.put(DataSource.class, dataSource);
-        dependencyInjectionManager = new DependencyInjectionManager(applicationProperties, externalDependencies);
+        dependencyInjectionManager = new DependencyInjectionManagerAdvanced(applicationProperties, externalDependencies);
         dependencyInjectionManager.addingClassesAndCorrespondingInstancesToContainerFromPackage("net.ishop.jdbc.repository");
         dependencyInjectionManager.addingClassesAndCorrespondingInstancesToContainerFromPackage("net.ishop.services.impl");
         dependencyInjectionManager.injectionOfDependenciesInInstances();

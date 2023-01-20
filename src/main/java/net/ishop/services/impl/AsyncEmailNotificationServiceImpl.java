@@ -1,8 +1,10 @@
 package net.ishop.services.impl;
 
+import net.framework.annotations.dependency_injection.Autowired;
 import net.framework.annotations.dependency_injection.Component;
 import net.framework.annotations.dependency_injection.Value;
 import net.ishop.entities.Order;
+import net.ishop.services.interfaces.NotificationContentBuilderService;
 import net.ishop.services.interfaces.NotificationService;
 import org.apache.commons.mail.EmailException;
 import org.apache.commons.mail.SimpleEmail;
@@ -25,8 +27,6 @@ public class AsyncEmailNotificationServiceImpl implements NotificationService {
     private String smtpUserName;
     @Value(value = "email.smtp.password")
     private String smtpPassword;
-    @Value(value = "app.host")
-    private String host;
     @Value(value = "email.smtp.fromAddress")
     private String fromAddress;
     @Value(value = "email.smtp.numberOfAttempts")
@@ -36,19 +36,13 @@ public class AsyncEmailNotificationServiceImpl implements NotificationService {
         this.executorService = Executors.newCachedThreadPool();
     }
 
-
     @Override
-    public void sendNotificationAboutCreatedNewOrder(String notificationAddress, Order order) {
-        String notificationMessage = this.buildNotificationMessage(order);
+    public void sendNotification(String notificationAddress, String notificationMessage) {
         executorService.submit(new EmailItem(
                 notificationAddress,
                 "New Order",
                 notificationMessage,
                 Integer.parseInt(numberOfAttempts)));
-    }
-
-    protected String buildNotificationMessage(Order order) {
-        return host + "/order?id=" + order.getId();
     }
 
     public void close() {
