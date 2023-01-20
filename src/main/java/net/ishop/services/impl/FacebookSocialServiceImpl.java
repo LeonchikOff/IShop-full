@@ -8,18 +8,27 @@ import com.restfb.scope.FacebookPermissions;
 import com.restfb.scope.ScopeBuilder;
 import com.restfb.types.User;
 
+import net.framework.annotations.dependency_injection.Component;
+import net.framework.annotations.dependency_injection.Value;
 import net.ishop.models.social.SocialAccount;
-import net.ishop.services.SocialService;
+import net.ishop.services.ServiceManager;
+import net.ishop.services.interfaces.SocialService;
 
+@Component
 public class FacebookSocialServiceImpl implements SocialService {
-    public final String idClient;
-    public final String secret;
-    public final String redirectUrl;
+    @Value(value = "social.facebook.idClient")
+    private String idClient;
+    @Value(value = "social.facebook.secret")
+    private String secret;
+    @Value(value = "app.host")
+    private String host;
 
-    public FacebookSocialServiceImpl(ServiceManager serviceManager) {
-        idClient = serviceManager.getApplicationProperty("social.facebook.idClient");
-        secret = serviceManager.getApplicationProperty("social.facebook.secret");
-        redirectUrl = serviceManager.getApplicationProperty("app.host") + "/from-social";
+    public FacebookSocialServiceImpl() {
+    }
+
+
+    private String getRedirectUrl() {
+        return host + "/from-social";
     }
 
     @Override
@@ -27,13 +36,13 @@ public class FacebookSocialServiceImpl implements SocialService {
         ScopeBuilder scopeBuilder = new ScopeBuilder();
         scopeBuilder.addPermission(FacebookPermissions.EMAIL);
         FacebookClient facebookClient = new DefaultFacebookClient(Version.VERSION_4_0);
-        return facebookClient.getLoginDialogUrl(idClient, redirectUrl, scopeBuilder);
+        return facebookClient.getLoginDialogUrl(idClient, getRedirectUrl(), scopeBuilder);
     }
 
     @Override
     public SocialAccount getSocialAccount(String authToken) {
         DefaultFacebookClient facebookClient = new DefaultFacebookClient(Version.VERSION_4_0);
-        FacebookClient.AccessToken userAccessToken = facebookClient.obtainUserAccessToken(idClient, secret, redirectUrl, authToken);
+        FacebookClient.AccessToken userAccessToken = facebookClient.obtainUserAccessToken(idClient, secret, getRedirectUrl(), authToken);
         facebookClient = new DefaultFacebookClient(userAccessToken.getAccessToken(), Version.VERSION_4_0);
         User user = facebookClient.fetchObject("me", User.class,
                 Parameter.with("fields", "name,email,first_name,last_name"));

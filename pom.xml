@@ -22,7 +22,14 @@
 
 
   <dependencies>
-<!--    &lt;!&ndash; https://mvnrepository.com/artifact/org.hibernate/hibernate-annotations &ndash;&gt;-->
+<!--      &lt;!&ndash; https://mvnrepository.com/artifact/org.springframework/spring-context &ndash;&gt;-->
+<!--      <dependency>-->
+<!--          <groupId>org.springframework</groupId>-->
+<!--          <artifactId>spring-context</artifactId>-->
+<!--          <version>6.0.4</version>-->
+<!--      </dependency>-->
+
+      <!--    &lt;!&ndash; https://mvnrepository.com/artifact/org.hibernate/hibernate-annotations &ndash;&gt;-->
 <!--    <dependency>-->
 <!--      <groupId>org.hibernate</groupId>-->
 <!--      <artifactId>hibernate-annotations</artifactId>-->

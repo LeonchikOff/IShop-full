@@ -1,8 +1,8 @@
 package net.ishop.filters;
 
 import net.ishop.models.constants.Constants;
-import net.ishop.services.ProductService;
-import net.ishop.services.impl.ServiceManager;
+import net.ishop.services.interfaces.ProductService;
+import net.ishop.services.ServiceManager;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;

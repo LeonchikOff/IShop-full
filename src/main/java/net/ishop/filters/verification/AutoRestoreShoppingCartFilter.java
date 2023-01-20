@@ -2,8 +2,8 @@ package net.ishop.filters.verification;
 
 import net.ishop.filters.AbstractFilter;
 import net.ishop.models.ShoppingCart;
-import net.ishop.services.OrderService;
-import net.ishop.services.impl.ServiceManager;
+import net.ishop.services.interfaces.OrderService;
+import net.ishop.services.ServiceManager;
 import net.ishop.utils.SessionShoppingCartUtils;
 
 import javax.servlet.FilterChain;

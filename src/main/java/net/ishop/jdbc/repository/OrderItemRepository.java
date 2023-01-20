@@ -1,5 +1,6 @@
 package net.ishop.jdbc.repository;
 
+import net.framework.annotations.dependency_injection.JDBCRepository;
 import net.framework.annotations.jdbc.Insert;
 import net.framework.annotations.jdbc.Select;
 import net.framework.annotations.jdbc.mapping.CollectionItem;
@@ -7,6 +8,7 @@ import net.ishop.entities.OrderItem;
 
 import java.util.List;
 
+@JDBCRepository
 public interface OrderItemRepository {
     String QUERY_ORDER_ITEMS_BY_ORDER_ID = "SELECT oi.id, oi.id_order as id_order, p.*, p.id as id_product, p.name, price, description, image_link, " +
             "ctr.name as category, pr.name as producer, oi.count " +

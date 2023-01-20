@@ -1,14 +1,16 @@
 package net.ishop.jdbc.repository;
 
+import net.framework.annotations.dependency_injection.JDBCRepository;
 import net.framework.annotations.jdbc.Select;
 import net.framework.annotations.jdbc.mapping.CollectionItem;
 import net.ishop.entities.Product;
-import net.ishop.jdbc.repository.sql_builders.CountProductsSearchFormSqlBuilder;
-import net.ishop.jdbc.repository.sql_builders.ListProductsSearchFormSqlBuilder;
+import net.ishop.jdbc.sql_builders.CountProductsSearchFormSqlBuilder;
+import net.ishop.jdbc.sql_builders.ListProductsSearchFormSqlBuilder;
 import net.ishop.models.forms.SearchForm;
 
 import java.util.List;
 
+@JDBCRepository
 public interface ProductRepository {
 
     String sqlQuery1 = "SELECT p.*, ctr.name AS category, pr.name AS producer " +

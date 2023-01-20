@@ -1,4 +1,4 @@
-package net.ishop.services;
+package net.ishop.services.interfaces;
 
 import net.ishop.models.social.SocialAccount;
 

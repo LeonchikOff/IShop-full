@@ -1,4 +1,4 @@
-package net.ishop.jdbc.repository.sql_builders;
+package net.ishop.jdbc.sql_builders;
 
 public class ListProductsSearchFormSqlBuilder extends AbstractSearchFormSqlBuilder {
     @Override

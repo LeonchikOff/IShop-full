@@ -1,5 +1,7 @@
 package net.ishop.services.impl;
 
+import net.framework.annotations.dependency_injection.Autowired;
+import net.framework.annotations.dependency_injection.Component;
 import net.framework.annotations.jdbc.Transactional;
 import net.ishop.entities.Category;
 import net.ishop.entities.Producer;
@@ -8,21 +10,21 @@ import net.ishop.jdbc.repository.CategoryRepository;
 import net.ishop.jdbc.repository.ProducerRepository;
 import net.ishop.jdbc.repository.ProductRepository;
 import net.ishop.models.forms.SearchForm;
-import net.ishop.services.ProductService;
+import net.ishop.services.interfaces.ProductService;
 
 import java.util.List;
 
+@Component
 @Transactional
 public class ProductServiceImpl implements ProductService {
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProducerRepository producerRepository;
+    @Autowired
+    private CategoryRepository categoryRepository;
 
-    private final ProductRepository productRepository;
-    private final ProducerRepository producerRepository;
-    private final CategoryRepository categoryRepository;
-
-    public ProductServiceImpl(ServiceManager serviceManager) {
-        productRepository = serviceManager.getProductRepository();
-        producerRepository = serviceManager.getProducerRepository();
-        categoryRepository = serviceManager.getCategoryRepository();
+    public ProductServiceImpl() {
     }
 
     @Override

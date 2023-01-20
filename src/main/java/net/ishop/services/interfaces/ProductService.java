@@ -1,4 +1,4 @@
-package net.ishop.services;
+package net.ishop.services.interfaces;
 
 import net.framework.annotations.jdbc.Transactional;
 import net.ishop.entities.Category;

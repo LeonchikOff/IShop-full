@@ -8,6 +8,7 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>IShop</title>
+        <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
         <link rel="stylesheet" href="<c:url value="/static/css/bootstrap.css"/>">
         <link rel="stylesheet" href="<c:url value="/static/css/bootstrap-theme.css"/>">
         <link rel="stylesheet" href="<c:url value="/static/css/font-awesome.css"/>">

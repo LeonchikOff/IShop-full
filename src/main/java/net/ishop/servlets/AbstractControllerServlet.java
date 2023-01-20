@@ -2,10 +2,10 @@ package net.ishop.servlets;
 
 import net.ishop.models.forms.ProductForm;
 import net.ishop.models.forms.SearchForm;
-import net.ishop.services.OrderService;
-import net.ishop.services.ProductService;
-import net.ishop.services.SocialService;
-import net.ishop.services.impl.ServiceManager;
+import net.ishop.services.interfaces.OrderService;
+import net.ishop.services.interfaces.ProductService;
+import net.ishop.services.interfaces.SocialService;
+import net.ishop.services.ServiceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
